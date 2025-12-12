@@ -13,8 +13,8 @@
   "options": {
     "mqtt_host": "localhost",
     "mqtt_port": 1883,
-    "mqtt_user": "MQTT_UZIVATEL",
-    "mqtt_password": "MQTT_HESLO",
+    "mqtt_user": "dodold",
+    "mqtt_password": "Lubos12421+",
     "inverters": [
       {
         "name": "easun_smiv",
