@@ -1,0 +1,18 @@
+name: "EASUN HID"
+version: "1.0.0"
+slug: "easun_hid"
+description: "HID reader for EASUN SM-IV inverter"
+arch:
+  - aarch64
+  - amd64
+startup: services
+boot: auto
+ports: {}
+uart: false
+map:
+  - config:rw
+host_network: false
+ingress: false
+options: {}
+schema: {}
+image: "local/easun_hid"
