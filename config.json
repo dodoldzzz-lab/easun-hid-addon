@@ -1,0 +1,29 @@
+{
+  "name": "EASUN HID Reader",
+  "version": "0.1",
+  "slug": "easun_hid",
+  "init": false,
+  "docker_api": false,
+  "host_network": true,
+  "map": ["config:rw"],
+  "options": {
+    "inverters": [],
+    "mqtt_host": "localhost",
+    "mqtt_port": 1883,
+    "mqtt_user": "",
+    "mqtt_password": ""
+  },
+  "schema": {
+    "inverters": [
+      {
+        "name": "str",
+        "device": "str",
+        "mqtt_prefix": "str"
+      }
+    ],
+    "mqtt_host": "str",
+    "mqtt_port": "int",
+    "mqtt_user": "str?",
+    "mqtt_password": "str?"
+  }
+}
