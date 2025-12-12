@@ -1,11 +1,15 @@
 {
   "name": "EASUN HID Reader",
-  "version": "0.1",
+  "version": "0.1.0",
   "slug": "easun_hid",
+  "description": "Home Assistant addon for reading EASUN inverters over HID USB",
   "init": false,
-  "docker_api": false,
+  "startup": "services",
+  "ports": {},
+  "ports_description": {},
   "host_network": true,
   "map": ["config:rw"],
+  "devices": [],
   "options": {
     "inverters": [],
     "mqtt_host": "localhost",
