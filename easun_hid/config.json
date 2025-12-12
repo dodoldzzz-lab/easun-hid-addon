@@ -6,21 +6,28 @@
   "arch": ["amd64", "armv7", "aarch64"],
   "startup": "services",
   "boot": "auto",
-  "ports": {},
   "host_network": true,
+  "privileged": true,
+  "devices": ["/dev/hidraw0"],
   "map": ["config:rw"],
   "options": {
     "mqtt_host": "localhost",
     "mqtt_port": 1883,
-    "mqtt_user": "",
-    "mqtt_password": "",
-    "inverters": []
+    "mqtt_user": "MQTT_UZIVATEL",
+    "mqtt_password": "MQTT_HESLO",
+    "inverters": [
+      {
+        "name": "easun_smiv",
+        "device": "/dev/hidraw0",
+        "mqtt_prefix": "easun1"
+      }
+    ]
   },
   "schema": {
     "mqtt_host": "str",
     "mqtt_port": "int",
-    "mqtt_user": "str?",
-    "mqtt_password": "str?",
+    "mqtt_user": "str",
+    "mqtt_password": "str",
     "inverters": [
       {
         "name": "str",
