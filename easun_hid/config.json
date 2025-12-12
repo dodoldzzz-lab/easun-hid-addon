@@ -2,40 +2,31 @@
   "name": "EASUN HID Reader",
   "version": "0.1.0",
   "slug": "easun_hid",
-  "description": "Home Assistant add-on for reading EASUN inverters over USB HID and publishing to MQTT (placeholder implementation).",
-  "init": false,
+  "description": "Reads data from EASUN HID via USB and sends to MQTT",
+  "arch": ["amd64", "armv7", "aarch64"],
   "startup": "services",
+  "boot": "auto",
   "ports": {},
-  "ports_description": {},
   "host_network": true,
-  "map": [
-    "config:rw"
-  ],
-  "devices": [],
+  "map": ["config:rw"],
   "options": {
-    "inverters": [
-      {
-        "name": "easun1",
-        "device": "/dev/hidraw0",
-        "mqtt_prefix": "easun/1"
-      }
-    ],
     "mqtt_host": "localhost",
     "mqtt_port": 1883,
     "mqtt_user": "",
-    "mqtt_password": ""
+    "mqtt_password": "",
+    "inverters": []
   },
   "schema": {
+    "mqtt_host": "str",
+    "mqtt_port": "int",
+    "mqtt_user": "str?",
+    "mqtt_password": "str?",
     "inverters": [
       {
         "name": "str",
         "device": "str",
         "mqtt_prefix": "str"
       }
-    ],
-    "mqtt_host": "str",
-    "mqtt_port": "int",
-    "mqtt_user": "str?",
-    "mqtt_password": "str?"
+    ]
   }
 }
