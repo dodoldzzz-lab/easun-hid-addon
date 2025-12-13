@@ -1,110 +1,106 @@
+\
 #!/usr/bin/env python3
 import time
-import struct
 import json
-import paho.mqtt.client as mqtt
 import os
+import sys
+import traceback
 
-# ========= KONFIGURACE =========
+try:
+    import usb.core
+    import usb.util
+except Exception:
+    usb = None
 
-HID_DEVICE = os.environ.get("HID_DEVICE", "/dev/hidraw0")
+try:
+    import paho.mqtt.client as mqtt
+except Exception:
+    mqtt = None
 
-MQTT_HOST = os.environ.get("MQTT_HOST", "localhost")
-MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
-MQTT_USER = os.environ.get("MQTT_USER", "")
-MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "")
-MQTT_PREFIX = os.environ.get("MQTT_PREFIX", "easun1")
+OPTIONS_PATH = "/data/options.json"
 
-POLL_INTERVAL = 10  # sekundy
-
-# ========= CRC =========
-
-def calc_crc(command: bytes) -> bytes:
-    crc = 0
-    for b in command:
-        crc ^= b << 8
-        for _ in range(8):
-            if crc & 0x8000:
-                crc = (crc << 1) ^ 0x1021
-            else:
-                crc <<= 1
-            crc &= 0xFFFF
-    return struct.pack(">H", crc)
-
-# ========= HID KOMUNIKACE =========
-
-def send_command(dev, cmd: str) -> bytes:
-    payload = cmd.encode()
-    crc = calc_crc(payload)
-    packet = payload + crc + b"\r"
-
-    dev.write(packet)
-    time.sleep(0.4)
-
-    # SM IV často posílá víc dat
-    return dev.read(128)
-
-# ========= PARSOVÁNÍ =========
-
-def parse_qpigs(resp: bytes) -> dict:
+def load_options():
+    # Home Assistant Supervisor writes addon options to /data/options.json
     try:
-        text = resp.decode(errors="ignore").strip("\x00\r\n")
-        print("RAW TEXT:", text)
+        with open(OPTIONS_PATH, "r") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
-        if not text.startswith("("):
-            return {}
-
-        values = text[1:].split(" ")
-
-        return {
-            "grid_voltage": float(values[0]),
-            "grid_frequency": float(values[1]),
-            "ac_output_voltage": float(values[2]),
-            "ac_output_frequency": float(values[3]),
-            "ac_output_apparent_power": int(values[4]),
-            "ac_output_active_power": int(values[5]),
-            "battery_voltage": float(values[8]),
-            "battery_capacity": int(values[9]),
-            "pv_input_voltage": float(values[10]),
-            "pv_input_power": int(values[12]),
-        }
-
+def mqtt_connect(host, port, user, password):
+    if mqtt is None:
+        print("paho-mqtt not installed")
+        return None
+    client = mqtt.Client()
+    if user:
+        client.username_pw_set(user, password)
+    try:
+        client.connect(host, port, 60)
+        client.loop_start()
+        return client
     except Exception as e:
-        print("Parse error:", e)
-        return {}
+        print("MQTT connect failed:", e)
+        return None
 
-# ========= START =========
+def find_device(vendor=0x0665, product=0x5161):
+    if usb is None:
+        print("pyusb not installed")
+        return None
+    dev = usb.core.find(idVendor=vendor, idProduct=product)
+    return dev
 
-print("===================================")
-print("Starting EASUN HID Reader SM IV 5.6kW")
-print("HID device:", HID_DEVICE)
-print("MQTT:", MQTT_HOST, MQTT_PORT)
-print("Prefix:", MQTT_PREFIX)
-print("===================================")
+def publish(client, topic, payload):
+    if client:
+        try:
+            client.publish(topic, json.dumps(payload))
+        except Exception as e:
+            print("MQTT publish error:", e)
+    else:
+        print("MQTT:", topic, payload)
 
-mqttc = mqtt.Client()
-if MQTT_USER:
-    mqttc.username_pw_set(MQTT_USER, MQTT_PASSWORD)
-
-mqttc.connect(MQTT_HOST, MQTT_PORT, 60)
-mqttc.loop_start()
-
-with open(HID_DEVICE, "rb+", buffering=0) as hid:
-    print("HID device opened")
-
+def read_loop(options):
+    mqtt_client = mqtt_connect(options.get("mqtt_host","localhost"), options.get("mqtt_port",1883), options.get("mqtt_user",""), options.get("mqtt_password",""))
+    inverters = options.get("inverters", [])
+    if not inverters:
+        inverters = [{"name":"easun1","device":"/dev/hidraw0","mqtt_prefix":"easun/1"}]
     while True:
         try:
-            resp = send_command(hid, "QPIGS")
-            print("RAW BYTES:", resp)
+            for inv in inverters:
+                name = inv.get("name","easun")
+                prefix = inv.get("mqtt_prefix", f"easun/{name}")
+                # Try to find USB device
+                dev = find_device()
+                if dev is None:
+                    # publish dummy telemetry
+                    data = {
+                        "name": name,
+                        "status": "no_device",
+                        "power_w": 0,
+                        "voltage_v": 0,
+                        "timestamp": int(time.time())
+                    }
+                    publish(mqtt_client, f"{prefix}/telemetry", data)
+                else:
+                    # Placeholder: actual HID protocol should be implemented here
+                    data = {
+                        "name": name,
+                        "status": "device_found",
+                        "idVendor": hex(dev.idVendor),
+                        "idProduct": hex(dev.idProduct),
+                        "timestamp": int(time.time())
+                    }
+                    publish(mqtt_client, f"{prefix}/telemetry", data)
+            time.sleep(10)
+        except KeyboardInterrupt:
+            break
+        except Exception:
+            traceback.print_exc()
+            time.sleep(5)
 
-            data = parse_qpigs(resp)
+def main():
+    options = load_options() or {}
+    # merge defaults from config.json if needed (not required)
+    read_loop(options.get("options", options))
 
-            if data:
-                print("QPIGS:", data)
-                for k, v in data.items():
-                    mqttc.publish(f"{MQTT_PREFIX}/{k}", v)
-
-        except Exception as e:
-            print("ERROR:", e)
-
-        time.sleep(POLL_INTERVAL)
+if __name__ == "__main__":
+    main()
