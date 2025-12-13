@@ -1,24 +1,21 @@
 FROM python:3.11-slim
 
-# Install required system packages
-RUN apt-get update && apt-get install -y \
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0 \
+    usbutils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create application directory
 WORKDIR /app
 
-# Copy addon files
-COPY easun_hid.py /app/
-COPY requirements.txt /app/
-COPY run.sh /app/
+COPY easun_hid.py requirements.txt run.sh /app/
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Make run.sh executable
 RUN chmod +x /app/run.sh
 
-# Start the application
 CMD ["/app/run.sh"]
