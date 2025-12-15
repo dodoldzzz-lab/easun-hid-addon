@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "Starting EASUN HID Reader add-on..."
+echo "Starting EASUN HID Reader addon..."
 
 export HID_DEVICE=/dev/hidraw0
 export MQTT_HOST=localhost
